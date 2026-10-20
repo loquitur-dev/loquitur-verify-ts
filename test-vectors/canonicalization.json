@@ -1,0 +1,253 @@
+{
+  "canonicalize_ok": [
+    {
+      "name": "key_ordering",
+      "input": {
+        "b": 1,
+        "a": 2,
+        "c": {
+          "z": 1,
+          "y": 2
+        }
+      },
+      "canonical_utf8": "{\"a\":2,\"b\":1,\"c\":{\"y\":2,\"z\":1}}",
+      "canonical_hex": "7b2261223a322c2262223a312c2263223a7b2279223a322c227a223a317d7d",
+      "sha256": "sha256:c0f8bd0ab5119fda84f6a24ed2eff88949e145d20f0a1eddbb51e14ef1eae3cb"
+    },
+    {
+      "name": "nested_arrays",
+      "input": {
+        "arr": [
+          3,
+          1,
+          2,
+          {
+            "k": "v"
+          }
+        ],
+        "n": null,
+        "t": true,
+        "f": false
+      },
+      "canonical_utf8": "{\"arr\":[3,1,2,{\"k\":\"v\"}],\"f\":false,\"n\":null,\"t\":true}",
+      "canonical_hex": "7b22617272223a5b332c312c322c7b226b223a2276227d5d2c2266223a66616c73652c226e223a6e756c6c2c2274223a747275657d",
+      "sha256": "sha256:c55516a76d6d261958b69656632be8ced0246d01b7891daf7a577402320fd77f"
+    },
+    {
+      "name": "unicode_string",
+      "input": {
+        "name": "Città di Massa — €, café, 日本語, Ω"
+      },
+      "canonical_utf8": "{\"name\":\"Città di Massa — €, café, 日本語, Ω\"}",
+      "canonical_hex": "7b226e616d65223a2243697474c3a0206469204d6173736120e2809420e282ac2c20636166c3a92c20e697a5e69cace8aa9e2c20cea9227d",
+      "sha256": "sha256:ac365f753f17f5924924815698237e5368628b3181dbcefbb07c6080f5e96e49"
+    },
+    {
+      "name": "control_and_escapes",
+      "input": {
+        "s": "tab\tnewline\nquote\"backslash\\end"
+      },
+      "canonical_utf8": "{\"s\":\"tab\\tnewline\\nquote\\\"backslash\\\\end\"}",
+      "canonical_hex": "7b2273223a227461625c746e65776c696e655c6e71756f74655c226261636b736c6173685c5c656e64227d",
+      "sha256": "sha256:c2f88126534dc095ee0d25dfb3cf768698533f6b3a5e02d415a4429f339ee5e8"
+    },
+    {
+      "name": "empty_containers",
+      "input": {
+        "o": {},
+        "a": [],
+        "s": ""
+      },
+      "canonical_utf8": "{\"a\":[],\"o\":{},\"s\":\"\"}",
+      "canonical_hex": "7b2261223a5b5d2c226f223a7b7d2c2273223a22227d",
+      "sha256": "sha256:c127f9b3c6f4233b3976f8e2d54486ab15f9a46cfa50fc14ae6d0787d1ac2917"
+    },
+    {
+      "name": "safe_int_boundary",
+      "input": {
+        "max": 9007199254740991,
+        "neg": -9007199254740991,
+        "zero": 0
+      },
+      "canonical_utf8": "{\"max\":9007199254740991,\"neg\":-9007199254740991,\"zero\":0}",
+      "canonical_hex": "7b226d6178223a393030373139393235343734303939312c226e6567223a2d393030373139393235343734303939312c227a65726f223a307d",
+      "sha256": "sha256:d1392b0f7a42ec31e1451a21c775ee2271a30427b9c7b2cb4cad602b5cef36a9"
+    },
+    {
+      "name": "mixed",
+      "input": {
+        "id": "reg_x",
+        "hashes": [
+          "sha256:aa",
+          "sha256:bb"
+        ],
+        "seq": 7,
+        "ok": true
+      },
+      "canonical_utf8": "{\"hashes\":[\"sha256:aa\",\"sha256:bb\"],\"id\":\"reg_x\",\"ok\":true,\"seq\":7}",
+      "canonical_hex": "7b22686173686573223a5b227368613235363a6161222c227368613235363a6262225d2c226964223a227265675f78222c226f6b223a747275652c22736571223a377d",
+      "sha256": "sha256:3879dd041a7ea7f9f17cba4d4d5e4abe43f17d49b8f632422932a5121d83f042"
+    },
+    {
+      "name": "fixture_change_summary",
+      "input": {
+        "object_type": "change_summary",
+        "schema_version": "v2",
+        "bundle_id": "bundle-001",
+        "current_bundle_id": "bundle-001"
+      },
+      "canonical_utf8": "{\"bundle_id\":\"bundle-001\",\"current_bundle_id\":\"bundle-001\",\"object_type\":\"change_summary\",\"schema_version\":\"v2\"}",
+      "canonical_hex": "7b2262756e646c655f6964223a2262756e646c652d303031222c2263757272656e745f62756e646c655f6964223a2262756e646c652d303031222c226f626a6563745f74797065223a226368616e67655f73756d6d617279222c22736368656d615f76657273696f6e223a227632227d",
+      "sha256": "sha256:d0abf1ffc4ea5db8cdd6fedd928ab19d68eae7ff7f82e15b5e442c36618223bc"
+    },
+    {
+      "name": "fixture_coverage_summary",
+      "input": {
+        "object_type": "coverage_summary",
+        "schema_version": "v2",
+        "bundle_id": "bundle-001",
+        "coverage": {},
+        "readiness": {}
+      },
+      "canonical_utf8": "{\"bundle_id\":\"bundle-001\",\"coverage\":{},\"object_type\":\"coverage_summary\",\"readiness\":{},\"schema_version\":\"v2\"}",
+      "canonical_hex": "7b2262756e646c655f6964223a2262756e646c652d303031222c22636f766572616765223a7b7d2c226f626a6563745f74797065223a22636f7665726167655f73756d6d617279222c2272656164696e657373223a7b7d2c22736368656d615f76657273696f6e223a227632227d",
+      "sha256": "sha256:a7e2a46146936944f7297a144c53ef0c40aa06434d4d1f0adf53b9d7337f0d0f"
+    },
+    {
+      "name": "fixture_lineage_summary",
+      "input": {
+        "object_type": "lineage_summary",
+        "schema_version": "v2"
+      },
+      "canonical_utf8": "{\"object_type\":\"lineage_summary\",\"schema_version\":\"v2\"}",
+      "canonical_hex": "7b226f626a6563745f74797065223a226c696e656167655f73756d6d617279222c22736368656d615f76657273696f6e223a227632227d",
+      "sha256": "sha256:6f60e70c14efc08b11ff5e1f2902fcca76d9ae6fa300ad60de90f70cdecc82f4"
+    },
+    {
+      "name": "fixture_registry_entry",
+      "input": {
+        "object_type": "registry_entry",
+        "schema_version": "v1",
+        "registry_entry_id": "reg_synthetic_demo_0001",
+        "receipt_id": "vr_synthetic_demo_0001",
+        "issuer_id": "issuer_synthetic_demo",
+        "issuer_key_id": "demo-key-2",
+        "asset_type": "fund_nav",
+        "workflow": "fund_nav_update",
+        "subject_ref_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "manifest_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "receipt_hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "policy_id": "loquitur.fund_nav.v1",
+        "policy_version": "1.0.0",
+        "reason_code_catalog_version": "loquitur.reason_codes.v1",
+        "verdict": "REVIEW",
+        "reason_codes": [
+          "CONFLICTING_EVIDENCE_DETECTED"
+        ],
+        "issued_at": "2026-04-29T12:00:00Z",
+        "effective_at": "2026-04-29T00:00:00Z",
+        "anchored_at": null,
+        "privacy_classification": "public_commitment",
+        "disclosure_profile": "issuer_controlled_bundle",
+        "signature": null,
+        "anchor": null
+      },
+      "canonical_utf8": "{\"anchor\":null,\"anchored_at\":null,\"asset_type\":\"fund_nav\",\"disclosure_profile\":\"issuer_controlled_bundle\",\"effective_at\":\"2026-04-29T00:00:00Z\",\"issued_at\":\"2026-04-29T12:00:00Z\",\"issuer_id\":\"issuer_synthetic_demo\",\"issuer_key_id\":\"demo-key-2\",\"manifest_hash\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"object_type\":\"registry_entry\",\"policy_id\":\"loquitur.fund_nav.v1\",\"policy_version\":\"1.0.0\",\"privacy_classification\":\"public_commitment\",\"reason_code_catalog_version\":\"loquitur.reason_codes.v1\",\"reason_codes\":[\"CONFLICTING_EVIDENCE_DETECTED\"],\"receipt_hash\":\"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"receipt_id\":\"vr_synthetic_demo_0001\",\"registry_entry_id\":\"reg_synthetic_demo_0001\",\"schema_version\":\"v1\",\"signature\":null,\"subject_ref_hash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"verdict\":\"REVIEW\",\"workflow\":\"fund_nav_update\"}",
+      "canonical_hex": "7b22616e63686f72223a6e756c6c2c22616e63686f7265645f6174223a6e756c6c2c2261737365745f74797065223a2266756e645f6e6176222c22646973636c6f737572655f70726f66696c65223a226973737565725f636f6e74726f6c6c65645f62756e646c65222c226566666563746976655f6174223a22323032362d30342d32395430303a30303a30305a222c226973737565645f6174223a22323032362d30342d32395431323a30303a30305a222c226973737565725f6964223a226973737565725f73796e7468657469635f64656d6f222c226973737565725f6b65795f6964223a2264656d6f2d6b65792d32222c226d616e69666573745f68617368223a227368613235363a62626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262626262222c226f626a6563745f74797065223a2272656769737472795f656e747279222c22706f6c6963795f6964223a226c6f7175697475722e66756e645f6e61762e7631222c22706f6c6963795f76657273696f6e223a22312e302e30222c22707269766163795f636c617373696669636174696f6e223a227075626c69635f636f6d6d69746d656e74222c22726561736f6e5f636f64655f636174616c6f675f76657273696f6e223a226c6f7175697475722e726561736f6e5f636f6465732e7631222c22726561736f6e5f636f646573223a5b22434f4e464c494354494e475f45564944454e43455f4445544543544544225d2c22726563656970745f68617368223a227368613235363a63636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363636363222c22726563656970745f6964223a2276725f73796e7468657469635f64656d6f5f30303031222c2272656769737472795f656e7472795f6964223a227265675f73796e7468657469635f64656d6f5f30303031222c22736368656d615f76657273696f6e223a227631222c227369676e6174757265223a6e756c6c2c227375626a6563745f7265665f68617368223a227368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161222c2276657264696374223a22524556494557222c22776f726b666c6f77223a2266756e645f6e61765f757064617465227d",
+      "sha256": "sha256:e68beeb32d78e87163297db764827a01e0c5026f3abed49a4fff80ff8e41398c"
+    },
+    {
+      "name": "fixture_trust_registry",
+      "input": {
+        "object_type": "trust_registry",
+        "schema_version": "v1",
+        "trust_registry_id": "tr_synthetic_demo_0001",
+        "registry_operator_id": "operator_loquitur_demo",
+        "registry_version": "0.1.0-demo",
+        "issued_at": "2026-04-29T12:00:00Z",
+        "effective_at": "2026-04-29T12:00:00Z",
+        "entries": [
+          {
+            "issuer_id": "issuer_synthetic_demo",
+            "issuer_display_name": "Synthetic Mid-Market RE Fund I Issuer",
+            "issuer_key_id": "demo-key-2",
+            "key_type": "secp256k1",
+            "public_key_hex": "049dd6b8f8236d4cda3a1b8a533a2ba1b83c002939ed5ceb7804d69bf8022160b8f3d0dd9e830076203a82f38c668ac93edbd47cb8cba7a311f3c9025262806efd",
+            "status": "active",
+            "effective_from": "2026-04-29T12:00:00Z",
+            "revoked_at": null,
+            "revocation_reason": null,
+            "allowed_asset_types": [
+              "property",
+              "fund_nav"
+            ],
+            "allowed_workflows": [
+              "property_pre_listing",
+              "property_review",
+              "fund_nav_initial",
+              "fund_nav_update"
+            ],
+            "notes": "Synthetic demo issuer only. Not a production issuer authorization.",
+            "expires_at": "2026-05-29T12:00:00Z"
+          }
+        ],
+        "signature": {
+          "algorithm": "secp256k1_ecdsa_sha256",
+          "key_id": "trust-registry-demo-key",
+          "signature": "demo-trust-registry-signature-placeholder-non-production"
+        },
+        "expires_at": "2026-05-29T12:00:00Z"
+      },
+      "canonical_utf8": "{\"effective_at\":\"2026-04-29T12:00:00Z\",\"entries\":[{\"allowed_asset_types\":[\"property\",\"fund_nav\"],\"allowed_workflows\":[\"property_pre_listing\",\"property_review\",\"fund_nav_initial\",\"fund_nav_update\"],\"effective_from\":\"2026-04-29T12:00:00Z\",\"expires_at\":\"2026-05-29T12:00:00Z\",\"issuer_display_name\":\"Synthetic Mid-Market RE Fund I Issuer\",\"issuer_id\":\"issuer_synthetic_demo\",\"issuer_key_id\":\"demo-key-2\",\"key_type\":\"secp256k1\",\"notes\":\"Synthetic demo issuer only. Not a production issuer authorization.\",\"public_key_hex\":\"049dd6b8f8236d4cda3a1b8a533a2ba1b83c002939ed5ceb7804d69bf8022160b8f3d0dd9e830076203a82f38c668ac93edbd47cb8cba7a311f3c9025262806efd\",\"revocation_reason\":null,\"revoked_at\":null,\"status\":\"active\"}],\"expires_at\":\"2026-05-29T12:00:00Z\",\"issued_at\":\"2026-04-29T12:00:00Z\",\"object_type\":\"trust_registry\",\"registry_operator_id\":\"operator_loquitur_demo\",\"registry_version\":\"0.1.0-demo\",\"schema_version\":\"v1\",\"signature\":{\"algorithm\":\"secp256k1_ecdsa_sha256\",\"key_id\":\"trust-registry-demo-key\",\"signature\":\"demo-trust-registry-signature-placeholder-non-production\"},\"trust_registry_id\":\"tr_synthetic_demo_0001\"}",
+      "canonical_hex": "7b226566666563746976655f6174223a22323032362d30342d32395431323a30303a30305a222c22656e7472696573223a5b7b22616c6c6f7765645f61737365745f7479706573223a5b2270726f7065727479222c2266756e645f6e6176225d2c22616c6c6f7765645f776f726b666c6f7773223a5b2270726f70657274795f7072655f6c697374696e67222c2270726f70657274795f726576696577222c2266756e645f6e61765f696e697469616c222c2266756e645f6e61765f757064617465225d2c226566666563746976655f66726f6d223a22323032362d30342d32395431323a30303a30305a222c22657870697265735f6174223a22323032362d30352d32395431323a30303a30305a222c226973737565725f646973706c61795f6e616d65223a2253796e746865746963204d69642d4d61726b65742052452046756e64204920497373756572222c226973737565725f6964223a226973737565725f73796e7468657469635f64656d6f222c226973737565725f6b65795f6964223a2264656d6f2d6b65792d32222c226b65795f74797065223a22736563703235366b31222c226e6f746573223a2253796e7468657469632064656d6f20697373756572206f6e6c792e204e6f7420612070726f64756374696f6e2069737375657220617574686f72697a6174696f6e2e222c227075626c69635f6b65795f686578223a2230343964643662386638323336643463646133613162386135333361326261316238336330303239333965643563656237383034643639626638303232313630623866336430646439653833303037363230336138326633386336363861633933656462643437636238636261376133313166336339303235323632383036656664222c227265766f636174696f6e5f726561736f6e223a6e756c6c2c227265766f6b65645f6174223a6e756c6c2c22737461747573223a22616374697665227d5d2c22657870697265735f6174223a22323032362d30352d32395431323a30303a30305a222c226973737565645f6174223a22323032362d30342d32395431323a30303a30305a222c226f626a6563745f74797065223a2274727573745f7265676973747279222c2272656769737472795f6f70657261746f725f6964223a226f70657261746f725f6c6f7175697475725f64656d6f222c2272656769737472795f76657273696f6e223a22302e312e302d64656d6f222c22736368656d615f76657273696f6e223a227631222c227369676e6174757265223a7b22616c676f726974686d223a22736563703235366b315f65636473615f736861323536222c226b65795f6964223a2274727573742d72656769737472792d64656d6f2d6b6579222c227369676e6174757265223a2264656d6f2d74727573742d72656769737472792d7369676e61747572652d706c616365686f6c6465722d6e6f6e2d70726f64756374696f6e227d2c2274727573745f72656769737472795f6964223a2274725f73796e7468657469635f64656d6f5f30303031227d",
+      "sha256": "sha256:6d55f26707555a1b610030b9b3542d69478300033c5fb75aceb5086f8abfaca3"
+    },
+    {
+      "name": "fixture_verification_receipt",
+      "input": {
+        "object_type": "verification_receipt",
+        "schema_version": "v2",
+        "bundle_id": "bundle-001",
+        "asset_type": "property",
+        "verification_mode": "offline_bundle",
+        "verified_at": "2026-05-08T00:00:00Z",
+        "policy_id": "loquitur.policy.property.demo",
+        "policy_version": 1,
+        "status": "review",
+        "reason_codes": [
+          "INTEGRITY_OK"
+        ],
+        "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "reason_code_vocabulary_version": "loquitur.reason_codes.v1"
+      },
+      "canonical_utf8": "{\"asset_type\":\"property\",\"bundle_id\":\"bundle-001\",\"manifest_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"object_type\":\"verification_receipt\",\"policy_id\":\"loquitur.policy.property.demo\",\"policy_version\":1,\"reason_code_vocabulary_version\":\"loquitur.reason_codes.v1\",\"reason_codes\":[\"INTEGRITY_OK\"],\"schema_version\":\"v2\",\"status\":\"review\",\"verification_mode\":\"offline_bundle\",\"verified_at\":\"2026-05-08T00:00:00Z\"}",
+      "canonical_hex": "7b2261737365745f74797065223a2270726f7065727479222c2262756e646c655f6964223a2262756e646c652d303031222c226d616e69666573745f736861323536223a2261616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161222c226f626a6563745f74797065223a22766572696669636174696f6e5f72656365697074222c22706f6c6963795f6964223a226c6f7175697475722e706f6c6963792e70726f70657274792e64656d6f222c22706f6c6963795f76657273696f6e223a312c22726561736f6e5f636f64655f766f636162756c6172795f76657273696f6e223a226c6f7175697475722e726561736f6e5f636f6465732e7631222c22726561736f6e5f636f646573223a5b22494e544547524954595f4f4b225d2c22736368656d615f76657273696f6e223a227632222c22737461747573223a22726576696577222c22766572696669636174696f6e5f6d6f6465223a226f66666c696e655f62756e646c65222c2276657269666965645f6174223a22323032362d30352d30385430303a30303a30305a227d",
+      "sha256": "sha256:229302862ab2b3ecb5ad9cd50d0975657c03040e71adc5268e9dfcc30834ba88"
+    },
+    {
+      "name": "fixture_verification_summary",
+      "input": {
+        "object_type": "verification_summary",
+        "schema_version": "v2",
+        "bundle_id": "bundle-001",
+        "status": "pass",
+        "reason_code_vocabulary_version": "loquitur.reason_codes.v1",
+        "policy_checks": {
+          "evaluation_clock_iso": "2026-05-01T12:30:00+00:00"
+        }
+      },
+      "canonical_utf8": "{\"bundle_id\":\"bundle-001\",\"object_type\":\"verification_summary\",\"policy_checks\":{\"evaluation_clock_iso\":\"2026-05-01T12:30:00+00:00\"},\"reason_code_vocabulary_version\":\"loquitur.reason_codes.v1\",\"schema_version\":\"v2\",\"status\":\"pass\"}",
+      "canonical_hex": "7b2262756e646c655f6964223a2262756e646c652d303031222c226f626a6563745f74797065223a22766572696669636174696f6e5f73756d6d617279222c22706f6c6963795f636865636b73223a7b226576616c756174696f6e5f636c6f636b5f69736f223a22323032362d30352d30315431323a33303a30302b30303a3030227d2c22726561736f6e5f636f64655f766f636162756c6172795f76657273696f6e223a226c6f7175697475722e726561736f6e5f636f6465732e7631222c22736368656d615f76657273696f6e223a227632222c22737461747573223a2270617373227d",
+      "sha256": "sha256:0cdc9f81139d394d403399cb0f473936aded1ba4ca1a0b00701ad84c991bfc64"
+    }
+  ],
+  "canonicalize_reject": [
+    {
+      "name": "js_unsafe_int",
+      "input": {
+        "n": 9007199254740993
+      },
+      "expect_error": true
+    }
+  ]
+}

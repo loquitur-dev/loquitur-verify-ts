@@ -1,0 +1,653 @@
+{
+  "valid": {
+    "bundle": "valid_bundle",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_OK",
+      "verdict": "PASS",
+      "exit_code": 0
+    }
+  },
+  "tampered": {
+    "bundle": "tampered_bundle",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": false,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_valid_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_OK",
+      "verdict": "PASS",
+      "exit_code": 0
+    }
+  },
+  "authorization_valid": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "evaluation_time": "2026-05-20T00:00:00Z",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "VALID_SIGNATURE",
+        "trust_registry": true
+      },
+      "status": "OFFLINE_REVIEW",
+      "verdict": "REVIEW",
+      "exit_code": 2
+    }
+  },
+  "authorization_revoked": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_revoked_trust_registry.json",
+    "evaluation_time": "2026-05-20T00:00:00Z",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_sigmismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_signature_mismatch_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "SIGNATURE_INVALID",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "dupkey_manifest": {
+    "bundle": "dupkey_manifest_bundle",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": false,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": false,
+        "manifest_sha256": false,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "malformed_manifest": {
+    "bundle": "malformed_manifest_bundle",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": false,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": false,
+        "manifest_sha256": false,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "review_no_envelope": {
+    "bundle": "review_no_envelope_bundle",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": null,
+        "envelope_present": false,
+        "envelope_sha256": null,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_REVIEW",
+      "verdict": "REVIEW",
+      "exit_code": 2
+    }
+  },
+  "link_reason_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_reason_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_verdict_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_verdict_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_asset_type_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_asset_type_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_manifest_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_manifest_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_policy_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_policy_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_reason_codes_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_reason_codes_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "link_receipt_hash_mismatch": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "link_receipt_hash_mismatch_registry_entry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": false,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_suspended": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_suspended_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_expired": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_expired_trust_registry.json",
+    "expected": {
+      "checks": {
+        "manifest_sha256": true,
+        "manifest_files": true,
+        "p1_sha256": true,
+        "canonical_input_present": true,
+        "p1_input_hash": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "envelope_links": true,
+        "registry_signature": "VALID_SIGNATURE",
+        "registry_link": true,
+        "trust_registry": true
+      },
+      "status": "OFFLINE_REVIEW",
+      "verdict": "REVIEW",
+      "exit_code": 2
+    }
+  },
+  "authorization_not_yet_effective": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_not_yet_effective_trust_registry.json",
+    "expected": {
+      "checks": {
+        "manifest_sha256": true,
+        "manifest_files": true,
+        "p1_sha256": true,
+        "canonical_input_present": true,
+        "p1_input_hash": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "envelope_links": true,
+        "registry_signature": "VALID_SIGNATURE",
+        "registry_link": true,
+        "trust_registry": true
+      },
+      "status": "OFFLINE_REVIEW",
+      "verdict": "REVIEW",
+      "exit_code": 2
+    }
+  },
+  "authorization_disallowed_asset_type": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_disallowed_asset_type_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_malformed_trust": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_malformed_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_unknown_issuer": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_unknown_issuer_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_unknown_key": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_unknown_key_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_sigmismatch_and_revoked": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_signature_mismatch_registry_entry.json",
+    "trust_registry": "authorization_revoked_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_sigmismatch_and_suspended": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_signature_mismatch_registry_entry.json",
+    "trust_registry": "authorization_suspended_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_sigmismatch_and_expired": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_signature_mismatch_registry_entry.json",
+    "trust_registry": "authorization_expired_trust_registry.json",
+    "expected": {
+      "checks": {
+        "manifest_sha256": true,
+        "manifest_files": true,
+        "p1_sha256": true,
+        "canonical_input_present": true,
+        "p1_input_hash": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "envelope_links": true,
+        "registry_signature": "SIGNATURE_INVALID",
+        "registry_link": true,
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "authorization_unknown_key_and_revoked": {
+    "bundle": "link_valid_bundle",
+    "registry_entry": "authorization_unknown_key_registry_entry.json",
+    "trust_registry": "authorization_revoked_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": true,
+        "p1_sha256": true,
+        "registry_link": true,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": false
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "tampered_with_authorization": {
+    "bundle": "tampered_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "expected": {
+      "checks": {
+        "canonical_input_present": true,
+        "envelope_links": true,
+        "envelope_present": true,
+        "envelope_sha256": true,
+        "manifest_files": true,
+        "manifest_sha256": true,
+        "p1_input_hash": false,
+        "p1_sha256": true,
+        "registry_link": null,
+        "registry_signature": "UNSUPPORTED",
+        "trust_registry": null
+      },
+      "status": "OFFLINE_FAIL",
+      "verdict": "FAIL",
+      "exit_code": 1
+    }
+  },
+  "review_no_envelope_with_authorization": {
+    "bundle": "review_no_envelope_bundle",
+    "registry_entry": "authorization_valid_registry_entry.json",
+    "trust_registry": "authorization_valid_trust_registry.json",
+    "expected": {
+      "checks": {
+        "manifest_sha256": true,
+        "manifest_files": true,
+        "p1_sha256": true,
+        "canonical_input_present": true,
+        "p1_input_hash": true,
+        "envelope_present": false,
+        "envelope_sha256": null,
+        "envelope_links": null,
+        "registry_signature": "UNSUPPORTED",
+        "registry_link": null,
+        "trust_registry": null
+      },
+      "status": "OFFLINE_REVIEW",
+      "verdict": "REVIEW",
+      "exit_code": 2
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "consumption": "read-only-generated-contract",
+  "generator_id": "loquitur.schemas.typescript.v2",
+  "manual_editing": false,
+  "registry_verdicts": [
+    "PASS",
+    "WARN",
+    "REVIEW",
+    "FAIL"
+  ],
+  "release_set_id": "loquitur-release-set-0.1.0-schema-types",
+  "schema_version": "loquitur.schema_types_lock.v1",
+  "sdk_path": "src/generated/loquitur-protocol.ts",
+  "sdk_sha256": "cb8ed08c5922d5d86411f6ac33c3501fe6da2c1948f404381b8f2a65470cf23f",
+  "source_manifest_path": "src/loquitur/schemas/types/loquitur-protocol.manifest.json",
+  "source_manifest_sha256": "0365a916bdcf8905ff7a0ca0194d6265e1e2ea76b500cde23085ca693bd01174",
+  "source_path": "src/loquitur/schemas/types/loquitur-protocol.d.ts",
+  "source_repository": "loquitur-schemas",
+  "source_sha256": "cb8ed08c5922d5d86411f6ac33c3501fe6da2c1948f404381b8f2a65470cf23f",
+  "verification_statuses": [
+    "pass",
+    "warning",
+    "review",
+    "fail"
+  ]
+}

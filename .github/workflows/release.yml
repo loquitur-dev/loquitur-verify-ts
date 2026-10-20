@@ -1,0 +1,338 @@
+# Release of `@loquitur/verify`: build the package from a version tag, attest every file and
+# attach the files to a draft GitHub release.
+#
+# docs/maintainers/releasing.md is the reader's account of this workflow: the tag rules, what each
+# job does, how a third party checks the files, and what the files do not prove. In short:
+#
+# - `verify` refuses a manual run on a tag, and holds the tag to the rules (annotated, with a
+#   signature GitHub verifies, vX.Y.Z, on the default branch, the version in package.json and
+#   package-lock.json) and the CHANGELOG to a section for the version, with text in it;
+# - `checks` runs ci.yml, every check a commit to main runs, once `verify` passes;
+# - `build` builds the npm tarball from the tag after `npm ci`, searches it for disclosure needles,
+#   writes a CycloneDX SBOM with `npm sbom` and a SHA256SUMS over both, and keeps the three files
+#   as a workflow artifact. It holds no write permission;
+# - `attest` takes the three files from that artifact, checks them against SHA256SUMS and attests
+#   them. It checks out nothing and installs nothing, so no code of the repository or of a
+#   dependency runs where the attestation token is;
+# - `release` checks the files against SHA256SUMS and creates a draft release for the tag with
+#   them. Publishing the draft is the maintainer's own act, in the GitHub interface.
+#
+# Nothing here publishes to npm or to any other registry: there is no publish job and no registry
+# token. A manual run (workflow_dispatch) is a dry run, on a branch: it verifies, builds and
+# attests, and the `release` job does not run. In a private repository it attests nothing either,
+# and says so.
+#
+# Every action is pinned by full commit SHA, with its tag in a comment. The workflow sets no
+# permission at the top; each job declares the ones it needs and nothing more. No concurrency group
+# is set: ci.yml, called below, sets its own, and a caller with the same group would wait on itself.
+name: release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: A tag is released by pushing it, not by a manual run
+        # A manual run is a dry run and skips the tag check below. Started on a tag, it would
+        # still attest its files as built by this workflow from refs/tags/vX.Y.Z, which is what
+        # the `gh attestation verify` commands of releasing.md accept.
+        if: github.event_name != 'push' && github.ref_type == 'tag'
+        shell: bash
+        run: |
+          echo "::error::a dry run runs on a branch; a tag is released by pushing it"
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history and every branch, for the default-branch check below. The tag
+          # itself is asked of GitHub's API rather than of this clone: only the API reports
+          # whether GitHub verified the tag's signature, and it answers for the tag as GitHub
+          # holds it.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: The version in package.json and package-lock.json
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          lock="$(node -p 'require("./package-lock.json").version')"
+          lock_root="$(node -p 'require("./package-lock.json").packages[""].version')"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::package.json version $version is not X.Y.Z"
+            exit 1
+          fi
+          if [ "$lock" != "$version" ] || [ "$lock_root" != "$version" ]; then
+            echo "::error::package-lock.json says $lock and $lock_root, package.json says $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: The CHANGELOG has a section for the version, with text in it
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          # The release section heading: `## [X.Y.Z]`, or `## [X.Y.Z] - YYYY-MM-DD` in a published
+          # copy, with an ASCII hyphen.
+          heading="^## \[${VERSION//./[.]}\]( - [0-9]{4}-[0-9]{2}-[0-9]{2})?$"
+          if ! grep -Eq "$heading" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section heading for $VERSION"
+            exit 1
+          fi
+          # The section runs from its heading to the next `## ` heading. grep finds the heading,
+          # so the pattern is read by one program only.
+          start="$(grep -Enm1 "$heading" CHANGELOG.md | cut -d: -f1)"
+          if ! awk -v start="$start" '
+            NR > start && /^## / { exit }
+            NR > start && NF { text = 1; exit }
+            END { exit !text }
+          ' CHANGELOG.md; then
+            echo "::error::the CHANGELOG.md section for $VERSION has no text"
+            exit 1
+          fi
+      - name: The tag is vX.Y.Z of that version, annotated, signed and on the default branch
+        if: github.event_name == 'push'
+        # The tag object is asked of the API, not of the checkout (see the checkout above). GitHub
+        # marks a tag verified when its signature checks against a signing key of the account
+        # that made it; `git tag -v`, which docs/maintainers/releasing.md gives a reader, checks
+        # it against the maintainer's key.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::tag $TAG is not vX.Y.Z with no leading zeros"
+            exit 1
+          fi
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::tag $TAG does not match package.json version $VERSION"
+            exit 1
+          fi
+          # Each answer is kept in a variable before it is read: bash checks the status of a
+          # command substitution, and not that of a process substitution, `read < <(gh api ...)`.
+          if ! ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '[.object.type, .object.sha] | @tsv')"; then
+            echo "::error::GitHub's API gave no answer for the ref of tag $TAG"
+            exit 1
+          fi
+          IFS=$'\t' read -r ref_type tag_sha <<< "$ref"
+          if [ "$ref_type" != "tag" ]; then
+            if [ "$ref_type" = "commit" ]; then
+              echo "::error::tag $TAG is lightweight; a release tag is annotated and signed (git tag -s)"
+            else
+              echo "::error::the ref of tag $TAG names no tag object (type '$ref_type')"
+            fi
+            exit 1
+          fi
+          if ! tag="$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" --jq '[.object.type, .object.sha, .verification.verified, .verification.reason] | @tsv')"; then
+            echo "::error::GitHub's API gave no answer for the tag object $tag_sha of $TAG"
+            exit 1
+          fi
+          IFS=$'\t' read -r target_type target_sha verified reason <<< "$tag"
+          if [ "$target_type" != "commit" ] || [ "$target_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::tag $TAG names $target_type $target_sha, not the commit this run builds ($GITHUB_SHA)"
+            exit 1
+          fi
+          if [ "$verified" != "true" ]; then
+            echo "::error::tag $TAG carries no signature GitHub verifies ($reason)"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "refs/remotes/origin/$DEFAULT_BRANCH"; then
+            echo "::error::tag $TAG points at a commit that is not on $DEFAULT_BRANCH"
+            exit 1
+          fi
+          echo "tag $TAG: annotated, signed and verified, version $VERSION, on $DEFAULT_BRANCH"
+
+  checks:
+    # ci.yml from the same commit: the checks a commit to main runs, run again on the tagged one
+    # once the tag has passed `verify`.
+    needs: verify
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: [verify, checks]
+    runs-on: ubuntu-24.04
+    # Read only: this job runs the package's own build and code of its dependencies, so it holds
+    # no token that can sign or write anything. The `attest` job signs what it leaves.
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # The engines floor, as in ci.yml's packaging job, at its newest release: without
+          # check-latest, setup-node takes whichever 22.x the runner image has cached. No
+          # dependency cache, even if package.json names a package manager one day: a release
+          # build installs from the lockfile and the registry alone.
+          node-version: "22"
+          check-latest: true
+          package-manager-cache: false
+      - name: Install from the lockfile
+        # `npm ci`: exactly the tree package-lock.json pins. `--ignore-scripts`: no dependency's
+        # install script runs at all. The package's own prepack, which `npm pack` runs below, is
+        # not an install script and still runs.
+        run: npm ci --ignore-scripts
+      - name: Build the npm tarball
+        # prepack runs the publication guard (which allows `pack`), a clean build and the
+        # source-map check, as in ci.yml's packaging job.
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-files
+          npm pack --pack-destination release-files
+          test -f "release-files/loquitur-verify-$VERSION.tgz"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: The tarball carries no disclosure needle
+        # A release attaches the packed tarball, not the tracked files ci.yml's boundary job reads:
+        # its compiled modules, declarations and source maps are searched here, with the needles of
+        # tools/public_boundary.json, before anything is summed. The tool needs only the standard
+        # library.
+        shell: bash
+        run: python tools/check_packed_tarball.py "release-files/loquitur-verify-$VERSION.tgz"
+      - name: Write the CycloneDX SBOM
+        # The package and its runtime dependency tree as package-lock.json resolves it. Build
+        # tools (TypeScript, the test runner) are not in it: the tarball carries none of them.
+        # npm names the root component after the folder it runs in, and only its bom-ref and purl
+        # after the package: the name is set from package.json, then all three are checked
+        # against it and the version `verify` read.
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm sbom --sbom-format cyclonedx --omit dev > "release-files/loquitur-verify-$VERSION.cdx.json"
+          node -e '
+            const fs = require("node:fs");
+            const file = process.argv[1];
+            const { name } = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const version = process.env.VERSION;
+            const sbom = JSON.parse(fs.readFileSync(file, "utf8"));
+            const root = sbom.metadata?.component;
+            if (sbom.bomFormat !== "CycloneDX" || !root) {
+              console.log("::error::" + file + " is not a CycloneDX SBOM with a root component");
+              process.exit(1);
+            }
+            root.name = name;
+            const purl = "pkg:npm/" + name.replace(/^@/, "%40") + "@" + version;
+            if (root.version !== version || root["bom-ref"] !== name + "@" + version || root.purl !== purl) {
+              console.log("::error::the SBOM root component is not " + name + "@" + version + ": " + JSON.stringify(root));
+              process.exit(1);
+            }
+            fs.writeFileSync(file, JSON.stringify(sbom, null, 2) + "\n");
+          ' "release-files/loquitur-verify-$VERSION.cdx.json"
+      - name: Write SHA256SUMS
+        shell: bash
+        working-directory: release-files
+        run: |
+          set -euo pipefail
+          sha256sum "loquitur-verify-$VERSION.tgz" "loquitur-verify-$VERSION.cdx.json" > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-files
+          path: release-files/
+          if-no-files-found: error
+
+  attest:
+    # The one job that holds the attestation token. It runs nothing but the pinned actions and the
+    # shell step below: no checkout, no setup, no install. It attests the files `build` left, once
+    # they are checked to be the three expected and to match SHA256SUMS.
+    needs: [verify, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      # The two attestation permissions: the OIDC token that signs the attestations, and the
+      # write that stores them on the repository.
+      id-token: write
+      attestations: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release-files
+      - name: The files are the three the build wrote, and they match SHA256SUMS
+        shell: bash
+        working-directory: release-files
+        run: |
+          set -euo pipefail
+          expected="$(printf '%s\n' SHA256SUMS "loquitur-verify-$VERSION.cdx.json" "loquitur-verify-$VERSION.tgz" | sort)"
+          actual="$(ls -1A | sort)"
+          if [ "$expected" != "$actual" ]; then
+            echo "::error::unexpected release files: $actual"
+            exit 1
+          fi
+          sha256sum --strict -c SHA256SUMS
+      - name: Attest where each file was built
+        # Artifact attestations need a public repository on the plans below GitHub Enterprise
+        # Cloud. A dry run in a private repository skips them and says so; a tag push never does.
+        if: github.event_name == 'push' || !github.event.repository.private
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            release-files/loquitur-verify-${{ env.VERSION }}.tgz
+            release-files/loquitur-verify-${{ env.VERSION }}.cdx.json
+            release-files/SHA256SUMS
+      - name: Attest the SBOM of the tarball
+        if: github.event_name == 'push' || !github.event.repository.private
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release-files/loquitur-verify-${{ env.VERSION }}.tgz
+          sbom-path: release-files/loquitur-verify-${{ env.VERSION }}.cdx.json
+      - name: Say that this dry run attested nothing
+        if: github.event_name != 'push' && github.event.repository.private
+        run: echo "::notice::private repository, so this dry run built, summed and described the files and attested none"
+
+  release:
+    # A tag push only: a manual run stops after `attest`.
+    if: github.event_name == 'push'
+    needs: [verify, attest]
+    runs-on: ubuntu-24.04
+    permissions:
+      # The one write this job needs: creating the draft release and uploading its files.
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-files
+          path: release-files
+      - name: The files match SHA256SUMS
+        # `attest` checked that the artifact holds exactly the three files.
+        shell: bash
+        working-directory: release-files
+        run: sha256sum --strict -c SHA256SUMS
+      - name: Create the draft release
+        # --draft: the release stays a draft until the maintainer publishes it. --verify-tag: the
+        # tag must already exist on GitHub, so this step never creates one.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" --draft --verify-tag \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$TAG" \
+            --notes "The changes are in CHANGELOG.md under $VERSION. docs/maintainers/releasing.md says how to check these files." \
+            release-files/*

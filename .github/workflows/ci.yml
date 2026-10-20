@@ -1,0 +1,373 @@
+# CI for the TypeScript offline verifier (`@loquitur/verify`).
+#
+# The package is one of the two verifiers an integrator installs, so every commit to main and
+# every pull request runs its checks: the typecheck, the verdict-path isolation, the suite, the
+# public-boundary scan, the schema-type lock, the publication guard and every commit's sign-off.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # release.yml calls this workflow, so a release runs every check a commit to main runs.
+  workflow_call:
+
+# One run per branch and event. Without this, a quick sequence of pushes leaves several runs
+# racing for the same answer and the last to finish wins, which is not necessarily the last
+# commit. Called from release.yml, github.workflow and github.ref are the caller's, so the group
+# starts with `ci-` and ends with the event: a group the caller took would never be this one, and
+# the run would not wait on itself.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+# Least privilege: a workflow with no permissions block runs with whatever the repository
+# default grants, often write. These jobs only read the repository.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # The package declares engines.node >= 22; every supported line is exercised
+        # because the verifier's correctness depends on runtime behavior.
+        node-version: ["22", "24"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      # `npm ci` and not `npm install`: the lockfile is the pinned input, and a CI run
+      # that silently resolves a different tree is testing something other than what ships.
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Typecheck the tests
+        # tsconfig.test.json extends tsconfig.json over src/ and test/, so a test that calls the
+        # package with an option or a type it does not have fails here rather than passing at run
+        # time on a value the package ignores.
+        run: npm run typecheck:test
+      - name: Nothing outside the verdict-path allow-list is imported, used or installed
+        # README.md and src/index.ts say this package makes no network calls, and
+        # the commitment behind them is that a verdict involves no network access and no AI.
+        # The script holds every source under src/ to an allow-list (its own files, Node
+        # built-ins outside the network ones, the reviewed runtime dependency closure resolved
+        # through the lockfile) and every lockfile package to a declared dependency; its header
+        # states the rule. Called directly; it has no npm script.
+        # test/verdict-path-isolation.test.ts, run by the next step, shows it failing on planted
+        # imports, globals and dependencies.
+        run: node scripts/check-verdict-path-isolation.mjs
+      - name: Test
+        run: npm test
+      - name: The host-dependent rows run on this runner, not skip
+        # A name that is not UTF-8, a noncharacter in a name and a POSIX symbolic link can all be
+        # made on this Linux runner. The rows that read them skip, with the reason, only on a
+        # host that cannot make them, so a host-reason skip here would leave them proved on no
+        # host this workflow runs on.
+        run: |
+          set -o pipefail
+          node --import tsx --test --test-reporter=tap test/member-name-noncharacter.test.ts \
+            test/member-name-unicode.test.ts test/reader-containment.test.ts | tee host-rows.txt
+          if grep -E "# SKIP .*(this host|this filesystem)" host-rows.txt; then
+            echo "a host-dependent row skipped on this runner"
+            exit 1
+          fi
+
+  siblings:
+    # The suite with the published repositories it reads checked out beside this one, where its
+    # tests look for them: loquitur-protocol, whose specification tables the spec-*.test.ts
+    # files hold this verifier to; loquitur-schemas and loquitur-verify-py, whose validators and
+    # vectors the cross-language tests compare with, through a Python able to import both. The
+    # `test` job above has none of them, and those tests skip there. test/public-boundary.test.ts
+    # runs here with every copy of tools/check_public_boundary.py present, so the copy this
+    # repository carries is held byte for byte to loquitur-schemas' and loquitur-verify-py's
+    # and its needle lists and maintainer rule to the protocol's checker, through the Python
+    # set up above; in the `test` job it runs the tool through the runner's own Python and
+    # skips the two comparisons.
+    #
+    # The job runs in a public repository: a GITHUB_TOKEN is scoped to its own repository and
+    # cannot check out a private sibling. The probe step asks, with no credentials, which of the
+    # three siblings are publicly readable, and only those are checked out and installed. When
+    # all three are, LOQUITUR_REQUIRE_SIBLINGS makes a missing sibling a failure. When some are
+    # not, a test that reads one of those skips and names it, and the job fails on a skip that
+    # names a sibling it did check out.
+    #
+    # Each sibling is checked out at its default branch's head, not at a matching tag, so a release
+    # run of this job depends on the siblings' state at that moment. A red siblings job on a tag is
+    # fixed in the sibling and the run started again; the tag is never moved.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    # Every Python the documents name, 3.11 or later, up to the newest release, as in every
+    # job of this workflow that runs Python.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Find the siblings that are publicly readable
+        id: probe
+        # Outside any checkout, so no stored credential is sent, and with prompts off, so a sibling
+        # that is not public answers "not found" at once instead of asking for a password. Any other
+        # failure (a network error, a server error) is no answer and is asked again, up to four
+        # times with a growing pause. On a tag, which release.yml runs this workflow for, a sibling
+        # still unanswered fails the job, so that a release never skips a sibling's checks for a
+        # transient failure; on any other run it is skipped with a warning.
+        working-directory: ${{ runner.temp }}
+        shell: bash
+        env: { GIT_TERMINAL_PROMPT: "0", OWNER: "${{ github.repository_owner }}", REF_TYPE: "${{ github.ref_type }}" }
+        run: |
+          published=""
+          for repo in loquitur-protocol loquitur-schemas loquitur-verify-py; do
+            answer=""
+            for attempt in 1 2 3 4; do
+              status=0
+              error="$(git ls-remote --exit-code "https://github.com/$OWNER/$repo.git" HEAD 2>&1 >/dev/null)" || status=$?
+              if [ "$status" -eq 0 ]; then answer=readable; break; fi
+              # Exit 2 is a repository with no HEAD; the messages are git's for a 401 with prompts
+              # off and for a 404. Each says the sibling is not publicly readable.
+              case "$status:$error" in
+                2:* | *"could not read Username"* | *"Repository not found"* | *"' not found"*) answer=unreadable; break ;;
+              esac
+              echo "probe of $repo failed (attempt $attempt of 4, exit $status): $error"
+              if [ "$attempt" -lt 4 ]; then sleep $((5 << (attempt - 1))); fi
+            done
+            case "$answer" in
+              readable) published="$published $repo" ;;
+              unreadable) ;;
+              *)
+                if [ "$REF_TYPE" = tag ]; then
+                  echo "::error::$repo could not be probed, so this run on a tag cannot tell whether its checks apply"
+                  exit 1
+                fi
+                echo "::warning::$repo could not be probed, so this run skips its checks"
+                ;;
+            esac
+          done
+          published="${published# }"
+          echo "published=$published" >> "$GITHUB_OUTPUT"
+          if [ "$published" = "loquitur-protocol loquitur-schemas loquitur-verify-py" ]; then all=true; else all=false; fi
+          echo "all=$all" >> "$GITHUB_OUTPUT"
+          echo "publicly readable siblings: ${published:-none}"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { path: loquitur-verify-ts }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: contains(format(' {0} ', steps.probe.outputs.published), ' loquitur-protocol ')
+        with: { repository: "${{ github.repository_owner }}/loquitur-protocol", path: loquitur-protocol }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: contains(format(' {0} ', steps.probe.outputs.published), ' loquitur-schemas ')
+        with: { repository: "${{ github.repository_owner }}/loquitur-schemas", path: loquitur-schemas }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: contains(format(' {0} ', steps.probe.outputs.published), ' loquitur-verify-py ')
+        with: { repository: "${{ github.repository_owner }}/loquitur-verify-py", path: loquitur-verify-py }
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: { python-version: "${{ matrix.python-version }}" }
+      - name: Install loquitur-schemas for the cross-language tests
+        if: contains(format(' {0} ', steps.probe.outputs.published), ' loquitur-schemas ')
+        run: |
+          python -m pip install pip==26.2.1
+          python -m pip install ./loquitur-schemas
+      - name: Install loquitur-verify-py for the cross-language tests
+        if: contains(format(' {0} ', steps.probe.outputs.published), ' loquitur-verify-py ')
+        run: |
+          python -m pip install pip==26.2.1
+          python -m pip install ./loquitur-verify-py
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: loquitur-verify-ts/package-lock.json
+      - run: npm ci
+        working-directory: loquitur-verify-ts
+      - name: Test (every sibling required)
+        if: steps.probe.outputs.all == 'true'
+        working-directory: loquitur-verify-ts
+        env:
+          LOQUITUR_REQUIRE_SIBLINGS: "1"
+        run: npm test
+      - name: Test; a skip may name only a sibling that is not checked out
+        if: steps.probe.outputs.all != 'true'
+        working-directory: loquitur-verify-ts
+        shell: bash
+        env: { PUBLISHED: "${{ steps.probe.outputs.published }}" }
+        run: |
+          set -o pipefail
+          node --import tsx --test --test-reporter=tap test/*.test.ts | tee siblings-tap.txt
+          for repo in $PUBLISHED; do
+            if grep -E "# SKIP .*$repo" siblings-tap.txt; then
+              echo "a test skipped naming $repo, which is checked out"
+              exit 1
+            fi
+          done
+
+  boundary:
+    # What this repository carries, read for disclosure needles and private-perimeter routes and
+    # hosts: every tracked file, because a release copy of a repository is made from its git
+    # ls-files.
+    # loquitur-schemas and loquitur-verify-py run tools/check_public_boundary.py from their
+    # test suites; this repository carries the same file, byte for byte, and has no Python
+    # suite, so the file is run directly. It needs only the standard library.
+    runs-on: ubuntu-24.04
+    # Every Python the documents name, 3.11 or later, up to the newest release, as in every
+    # job of this workflow that runs Python.
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: No disclosure needle or private-perimeter name in any tracked file
+        run: python tools/check_public_boundary.py
+
+  contracts:
+    # The locks that bind this package to artifacts owned by other repositories. They
+    # are checked in, so they can go stale silently; this command is what notices.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Generated protocol types match their lock
+        run: npm run types:schema:check
+
+  packaging:
+    # The package is deliberately unpublishable: publish-guard.mjs enforces
+    # `private: true`, the absence of publishConfig, and a whitelist that never ships
+    # src/, test/ or a bare dist/. That guard runs on prepack, so `npm pack` exercises it.
+    # release.yml packs the release tarball through the same guard, without the approval
+    # variable, which no job sets: docs/maintainers/releasing.md keeps it for a `publish` job
+    # that does not exist. This job proves the block holds; it does not perform a release.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Build and pack under the publication guard
+        run: npm pack --dry-run
+      - name: The README example runs against the build
+        # examples/verify-test-vectors.mjs imports the package by name, which resolves to the
+        # dist/ the step above built; it exits 1 when a report differs from test-vectors/verify.json.
+        run: node examples/verify-test-vectors.mjs
+      - name: The packed tarball, installed into a new project, verifies the test vectors
+        # What a project that installs the tarball gets, rather than this checkout's dist/: `npm pack`
+        # writes the tarball a release attaches, `npm install` puts it into a project that holds
+        # nothing else, and the README example, copied there, imports the package by name from that
+        # install and verifies test-vectors/ with it.
+        shell: bash
+        run: |
+          set -euo pipefail
+          packed="$RUNNER_TEMP/packed"
+          project="$RUNNER_TEMP/installed"
+          mkdir "$packed" "$project"
+          npm pack --pack-destination "$packed"
+          tarballs=("$packed"/*.tgz)
+          if [ "${#tarballs[@]}" -ne 1 ] || [ ! -f "${tarballs[0]}" ]; then
+            echo "::error::npm pack did not write one tarball"
+            exit 1
+          fi
+          cp examples/verify-test-vectors.mjs "$project/"
+          cd "$project"
+          npm init --yes >/dev/null
+          npm install --ignore-scripts --no-audit --no-fund "${tarballs[0]}"
+          node verify-test-vectors.mjs "$GITHUB_WORKSPACE/test-vectors"
+      - name: The guard refuses an unapproved publication
+        # Asserted directly rather than assumed: if the guard ever stopped refusing,
+        # every other job here would still be green.
+        run: |
+          if npm_command=publish node scripts/publish-guard.mjs; then
+            echo "::error::publish-guard did not refuse an unapproved publication"
+            exit 1
+          fi
+          echo "publication correctly refused"
+
+  dco:
+    # CONTRIBUTING.md requires a Developer Certificate of Origin sign-off on every commit, and
+    # this job enforces it: a policy no gate checks is satisfied by accident until the first
+    # commit that forgets.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The sign-off lives in the commit message, so the commits themselves are what
+          # this job reads, and a shallow clone cannot answer the question.
+          fetch-depth: 0
+      - name: Every commit must carry a Signed-off-by matching its author
+        # The event's values reach the script through the environment, never pasted into it.
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BEFORE: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          base="$BASE"
+          head="$HEAD_SHA"
+          before="$BEFORE"
+          default="$DEFAULT_BRANCH"
+          zero="0000000000000000000000000000000000000000"
+          if [ -n "$base" ]; then
+            range="$base..$head"
+          elif [ -n "$before" ] && [ "$before" != "$zero" ] && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            range="$before..$head"
+          elif [ "$before" = "$zero" ] && [ "$GITHUB_REF" = "refs/heads/$default" ]; then
+            # The default branch itself is pushed for the first time: no earlier revision of it
+            # exists and no other branch holds its commits, so every commit it carries is new.
+            range="$head"
+          else
+            # A new branch, or a push whose earlier revision this clone does not hold: there
+            # is no earlier revision of the branch to diff against. Its new commits are the
+            # ones not already on the default branch. Every reachable commit is not the
+            # range: that is the default branch's whole history, and every new branch cut
+            # from it would be judged on commits that are not its own, while the same
+            # commits pass as the pull request's range.
+            if [ -z "$default" ]; then
+              echo "::error::the event names no default branch to diff a new branch against"
+              exit 1
+            fi
+            ref="refs/remotes/origin/$default"
+            if ! git rev-parse -q --verify "$ref^{commit}" >/dev/null; then
+              git fetch --no-tags --quiet origin "+refs/heads/$default:$ref" || true
+            fi
+            if ! git rev-parse -q --verify "$ref^{commit}" >/dev/null; then
+              echo "::error::default branch $default not found; refusing to check the whole history"
+              exit 1
+            fi
+            range="$ref..$head"
+          fi
+          echo "DCO range: $range"
+
+          commits="$(git rev-list "$range")"
+          # Never report success over an empty range. If it resolves to nothing, fall
+          # back to the tip, which always exists: a pass here must mean a commit was
+          # inspected.
+          if [ -z "$commits" ]; then
+            commits="$head"
+          fi
+
+          fail=0
+          count=0
+          for sha in $commits; do
+            count=$((count + 1))
+            author="$(git show -s --format='%an <%ae>' "$sha")"
+            if ! git show -s --format='%B' "$sha" | grep -qiF "Signed-off-by: $author"; then
+              echo "::error::commit $sha by $author carries no matching Signed-off-by"
+              fail=1
+            fi
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "Sign off with: git commit -s   (existing commit: git commit --amend -s)"
+            exit 1
+          fi
+          echo "DCO OK: $count commit(s) inspected, each signed off by its author"

@@ -1,0 +1,69 @@
+{
+  "author": "Andrea Venè",
+  "bugs": {
+    "url": "https://github.com/loquitur-dev/loquitur-verify-ts/issues"
+  },
+  "dependencies": {
+    "@noble/curves": "~1.9.7",
+    "@noble/hashes": "~1.8.0",
+    "canonicalize": "~2.1.0"
+  },
+  "description": "Offline verifier for Loquitur evidence bundles: structure, integrity, registry link and issuer authorization, with no network (preview).",
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.1",
+    "fast-check": "4.10.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    },
+    "./browser": {
+      "types": "./dist/src/index.browser.d.ts",
+      "import": "./dist/src/index.browser.js",
+      "default": "./dist/src/index.browser.js"
+    }
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+    "NOTICE"
+  ],
+  "homepage": "https://github.com/loquitur-dev/loquitur-verify-ts#readme",
+  "license": "MIT OR Apache-2.0",
+  "name": "@loquitur/verify",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/loquitur-dev/loquitur-verify-ts.git"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:browser": "esbuild src/index.browser.ts --bundle --format=iife --global-name=LoquiturVerifier --platform=browser --target=es2020 --minify --outfile=dist/loquitur-verifier.browser.js",
+    "check": "npm run typecheck && npm run typecheck:test && npm run check:isolation && npm run types:schema:check && npm test",
+    "check:isolation": "node scripts/check-verdict-path-isolation.mjs",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "pack:dry-run": "npm pack --dry-run",
+    "pack:json": "npm pack --dry-run --json",
+    "prepack": "node scripts/publish-guard.mjs && npm run clean && npm run build && node scripts/check-pack-maps.mjs",
+    "publish:guard": "node scripts/publish-guard.mjs",
+    "test": "node --import tsx --test test/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json",
+    "types:schema:check": "node scripts/check-schema-types.mjs",
+    "types:schema:check:workspace": "node scripts/check-schema-types.mjs --schemas-root ../loquitur-schemas",
+    "prepublishOnly": "node scripts/publish-guard.mjs"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "version": "0.1.0"
+}
